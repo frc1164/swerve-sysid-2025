@@ -8,9 +8,18 @@ import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 
+import com.ctre.phoenix.motorcontrol.ControlMode;
+import com.ctre.phoenix.motorcontrol.FollowerType;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.CANcoder;
+import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
+import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.SensorDirectionValue;
+
+
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
@@ -32,29 +41,38 @@ import edu.wpi.first.units.measure.MutDistance;
 import edu.wpi.first.units.measure.MutLinearVelocity;
 import edu.wpi.first.units.measure.MutVoltage;
 
+
+
 public class Drive extends SubsystemBase {
     // The motors on the left side of the drive.
-    private final SparkMax m_LeftFrontMotor = new SparkMax(DriveConstants.kLeftFrontMotor1Port, MotorType.kBrushless);
-    private final SparkMax m_LeftBackMotor = new SparkMax(DriveConstants.kLeftBackMotor1Port, MotorType.kBrushless);
+    private final TalonFX m_LeftFrontMotor = new TalonFX(DriveConstants.kLeftFrontMotor1Port);
+    private final TalonFX m_LeftBackMotor = new TalonFX(DriveConstants.kLeftBackMotor1Port);
+    private final TalonFXConfiguration leftFrontConfig = new TalonFXConfiguration();
+    private final TalonFXConfiguration leftBackConfig = new TalonFXConfiguration();
+
     // The motors on the right side of the drive.
-    private final SparkMax m_RightFrontMotor = new SparkMax(DriveConstants.kRightFrontMotor1Port, MotorType.kBrushless);
-    private final SparkMax m_RightBackMotor = new SparkMax(DriveConstants.kRightBackMotor1Port, MotorType.kBrushless);
+    private final TalonFX m_RightFrontMotor = new TalonFX(DriveConstants.kRightFrontMotor1Port);
+    private final TalonFX m_RightBackMotor = new TalonFX(DriveConstants.kRightBackMotor1Port);
+    private final TalonFXConfiguration rightFrontConfig = new TalonFXConfiguration();
+    private final TalonFXConfiguration rightBackConfig = new TalonFXConfiguration();
+
+
     
     // The motors on the left side of the drive.
-    private final SparkMax m_LeftFrontTurnMotor = new SparkMax(kFrontLeftTurningMotorPort, MotorType.kBrushless);
-    private final SparkMax m_LeftBackTurnMotor = new SparkMax(kBackLeftTurningMotorPort, MotorType.kBrushless);
+    private final TalonFX m_LeftFrontTurnMotor = new TalonFX(kFrontLeftTurningMotorPort);
+    private final TalonFX m_LeftBackTurnMotor = new TalonFX(kBackLeftTurningMotorPort);
     // The motors on the right side of the drive.
-    private final SparkMax m_RightFrontTurnMotor = new SparkMax(kFrontRightTurningMotorPort, MotorType.kBrushless);
-    private final SparkMax m_RightBackTurnMotor = new SparkMax(kBackRightTurningMotorPort, MotorType.kBrushless);
+    private final TalonFX m_RightFrontTurnMotor = new TalonFX(kFrontRightTurningMotorPort);
+    private final TalonFX m_RightBackTurnMotor = new TalonFX(kBackRightTurningMotorPort);
 
     // The robot's drive
-    private final DifferentialDrive m_drive = new DifferentialDrive(m_LeftFrontMotor, m_RightFrontMotor);
+    private final DifferentialDrive m_drive = new DifferentialDrive(m_LeftFrontMotor::set, m_RightFrontMotor::set);
 
     // The left-side drive encoder
-    private final RelativeEncoder m_LeftFrontEncoder = m_LeftFrontMotor.getEncoder();
+    //private final RelativeEncoder m_LeftFrontEncoder = m_LeftFrontMotor.getEncoder();
 
     // The right-side drive encoder
-    private final RelativeEncoder m_RightFrontEncoder = m_RightFrontMotor.getEncoder();
+    //private final RelativeEncoder m_RightFrontEncoder = m_RightFrontMotor.getEncoder();
 
     // Mutable holder for unit-safe voltage values, persisted to avoid reallocation.
     private final MutVoltage m_appliedVoltage = Volts.mutable(0);
@@ -64,10 +82,7 @@ public class Drive extends SubsystemBase {
     // Mutable holder for unit-safe linear velocity values, persisted to avoid
     // reallocation.
     private final MutLinearVelocity m_velocity = MetersPerSecond.mutable(0);
-    private final SparkMaxConfig frontLeftSparkMaxConfig = new SparkMaxConfig();
-    private final SparkMaxConfig frontRightSparkMaxConfig = new SparkMaxConfig();
-    private final SparkMaxConfig backLeftSparkMaxConfig = new SparkMaxConfig();
-    private final SparkMaxConfig backRightSparkMaxConfig = new SparkMaxConfig();
+
 
     public static final double kWheelDiameterMeters = Units.inchesToMeters(4);
     public static final double kDriveMotorGearRatio = 1 / 6.75;
@@ -116,6 +131,10 @@ public class Drive extends SubsystemBase {
                     (Voltage volts) -> {
                         m_LeftFrontMotor.setVoltage(volts.in(Volts));
                         m_RightFrontMotor.setVoltage(volts.in(Volts));
+                        
+                        m_LeftBackMotor.setVoltage(volts.in(Volts));
+                        m_RightBackMotor.setVoltage(volts.in(Volts));
+
                     },
                     // Tell SysId how to record a frame of data for each motor on the mechanism
                     // being
@@ -124,30 +143,21 @@ public class Drive extends SubsystemBase {
                         // Record a frame for the left motors. Since these share an encoder, we consider
                         // the entire group to be one motor.
                         log.motor("drive-left")
-                                .voltage(
-                                        m_appliedVoltage.mut_replace(
-                                                m_LeftFrontMotor.getAppliedOutput() * m_LeftFrontMotor.getBusVoltage(),
-                                                Volts))
-                                .linearPosition(m_distance.mut_replace(m_LeftFrontEncoder.getPosition()
-                                        * kDriveEncoderRot2Meter, Meters))
+                                .voltage(m_LeftFrontMotor.getMotorVoltage().getValue())
+                                .linearPosition(m_distance.mut_replace(m_LeftFrontMotor.getPosition().getValueAsDouble() * kDriveEncoderRot2Meter, Meters))
                                 .linearVelocity(
                                         m_velocity.mut_replace(
-                                                m_LeftFrontEncoder.getVelocity() * kDriveEncoderRot2Meter / 60,
+                                                m_LeftFrontMotor.getVelocity().getValueAsDouble() * kDriveEncoderRPM2MeterPerSec,
                                                 MetersPerSecond));
 
                         // Record a frame for the right motors. Since these share an encoder, we consider
                         // the entire group to be one motor.
                         log.motor("drive-right")
-                                .voltage(
-                                        m_appliedVoltage.mut_replace(
-                                                m_RightFrontMotor.getAppliedOutput()
-                                                        * m_RightFrontMotor.getBusVoltage(),
-                                                Volts))
-                                .linearPosition(m_distance.mut_replace(m_RightFrontEncoder.getPosition()
-                                        * kDriveEncoderRot2Meter, Meters))
+                                .voltage(m_RightFrontMotor.getMotorVoltage().getValue())
+                                .linearPosition(m_distance.mut_replace(m_RightFrontMotor.getPosition().getValueAsDouble() * kDriveEncoderRot2Meter, Meters))
                                 .linearVelocity(
                                         m_velocity.mut_replace(
-                                                m_RightFrontEncoder.getVelocity() * kDriveEncoderRot2Meter / 60,
+                                                m_RightFrontMotor.getVelocity().getValueAsDouble() * kDriveEncoderRPM2MeterPerSec,
                                                 MetersPerSecond));
                     },
                     // Tell SysId to make generated commands require this subsystem, suffix test
@@ -162,39 +172,27 @@ public class Drive extends SubsystemBase {
         // m_RightFrontMotor.setInverted(false);
         // m_RightBackMotor.setInverted(false);
 
-        frontLeftSparkMaxConfig
-                .inverted(false)
-                .idleMode(IdleMode.kCoast);
-        frontLeftSparkMaxConfig.encoder
-                .positionConversionFactor(kDriveEncoderRot2Meter)
-                .velocityConversionFactor(kDriveEncoderRPM2MeterPerSec);
-        backLeftSparkMaxConfig
-                .inverted(false)
-                .idleMode(IdleMode.kCoast)
-                .follow(m_LeftFrontMotor);
-        backLeftSparkMaxConfig.encoder
-                .positionConversionFactor(kDriveEncoderRot2Meter)
-                .velocityConversionFactor(kDriveEncoderRPM2MeterPerSec);
+        leftFrontConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+        leftFrontConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        leftFrontConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
+        m_LeftFrontMotor.getConfigurator().apply(leftFrontConfig);
 
-        frontRightSparkMaxConfig
-                .inverted(false)
-                .idleMode(IdleMode.kCoast);
-        frontRightSparkMaxConfig.encoder
-                .positionConversionFactor(kDriveEncoderRot2Meter)
-                .velocityConversionFactor(kDriveEncoderRPM2MeterPerSec);
-        backRightSparkMaxConfig
-                .inverted(false)
-                .idleMode(IdleMode.kCoast)
-                .follow(m_RightFrontMotor);
-        backRightSparkMaxConfig.encoder
-                .positionConversionFactor(kDriveEncoderRot2Meter)
-                .velocityConversionFactor(kDriveEncoderRPM2MeterPerSec);
+        leftBackConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+        leftBackConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        leftBackConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
+        m_LeftBackMotor.getConfigurator().apply(leftBackConfig);
 
-        m_LeftFrontMotor.configure(frontLeftSparkMaxConfig, null, null);
-        m_LeftBackMotor.configure(backLeftSparkMaxConfig, null, null);
 
-        m_RightFrontMotor.configure(frontRightSparkMaxConfig, null, null);
-        m_RightBackMotor.configure(backRightSparkMaxConfig, null, null);
+        rightFrontConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+        rightFrontConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        rightFrontConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
+        m_RightFrontMotor.getConfigurator().apply(rightFrontConfig);
+
+        rightBackConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+        rightBackConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        rightBackConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
+        m_RightBackMotor.getConfigurator().apply(rightBackConfig);
+
 
 
         frontLeftAbsoluteEncoderConfig.MagnetSensor.AbsoluteSensorDiscontinuityPoint = 0.5;
