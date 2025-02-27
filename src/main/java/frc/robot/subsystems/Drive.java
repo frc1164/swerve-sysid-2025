@@ -61,9 +61,15 @@ public class Drive extends SubsystemBase {
     // The motors on the left side of the drive.
     private final TalonFX m_LeftFrontTurnMotor = new TalonFX(kFrontLeftTurningMotorPort);
     private final TalonFX m_LeftBackTurnMotor = new TalonFX(kBackLeftTurningMotorPort);
+    private final TalonFXConfiguration leftFrontTurnConfig = new TalonFXConfiguration();
+    private final TalonFXConfiguration leftBackTurnConfig = new TalonFXConfiguration();
+
     // The motors on the right side of the drive.
     private final TalonFX m_RightFrontTurnMotor = new TalonFX(kFrontRightTurningMotorPort);
     private final TalonFX m_RightBackTurnMotor = new TalonFX(kBackRightTurningMotorPort);
+    private final TalonFXConfiguration rightFrontTurnConfig = new TalonFXConfiguration();
+    private final TalonFXConfiguration rightBackTurnConfig = new TalonFXConfiguration();
+
 
     // The robot's drive
     private final DifferentialDrive m_drive = new DifferentialDrive(m_LeftFrontMotor::set, m_RightFrontMotor::set);
@@ -85,28 +91,28 @@ public class Drive extends SubsystemBase {
 
 
     public static final double kWheelDiameterMeters = Units.inchesToMeters(4);
-    public static final double kDriveMotorGearRatio = 1 / 6.75;
-    public static final double kTurningMotorGearRatio = 7.00 / 150.00;// 150.00 / 7.00;
+    public static final double kDriveMotorGearRatio = 5.36;
+    public static final double kTurningMotorGearRatio = 18.75;// 150.00 / 7.00;
     public static final double kDriveEncoderRot2Meter = kDriveMotorGearRatio * kWheelDiameterMeters * Math.PI;
     public static final double kTurningEncoderRot2Rad = kTurningMotorGearRatio * 2.0 * Math.PI;
     public static final double kDriveEncoderRPM2MeterPerSec = kDriveEncoderRot2Meter / 60.0;
     public static final double kTurningEncoderRPM2RadPerSec = kTurningEncoderRot2Rad / 60.0;
 
 
-    public static final double kFrontLeftDriveAbsoluteEncoderOffsetRad = 347.695 * Math.PI / 180.0;
-    public static final double kBackLeftDriveAbsoluteEncoderOffsetRad = 225.0 * Math.PI / 180.0;
-    public static final double kFrontRightDriveAbsoluteEncoderOffsetRad = 284.15 * Math.PI / 180.0;
-    public static final double kBackRightDriveAbsoluteEncoderOffsetRad = 245.25 * Math.PI / 180.0;
+    public static final double kFrontLeftDriveAbsoluteEncoderOffsetRad = 51.76764  * Math.PI / 180.0;
+    public static final double kBackLeftDriveAbsoluteEncoderOffsetRad = 234.9324 * Math.PI / 180.0;
+    public static final double kFrontRightDriveAbsoluteEncoderOffsetRad = 70.83972 * Math.PI / 180.0;
+    public static final double kBackRightDriveAbsoluteEncoderOffsetRad = 37.3536 * Math.PI / 180.0;
 
     public static final int kFrontLeftDriveAbsoluteEncoderPort = 12;
     public static final int kBackLeftDriveAbsoluteEncoderPort = 42;
     public static final int kFrontRightDriveAbsoluteEncoderPort = 22;
     public static final int kBackRightDriveAbsoluteEncoderPort = 32;
 
-    private final PIDController frontLeftTurnPidController = new PIDController(0.5, 0, 0);
-    private final PIDController backLeftTurnPidController = new PIDController(0.5, 0, 0);
-    private final PIDController frontRightTurnPidController = new PIDController(0.5, 0, 0);
-    private final PIDController backRightTurnPidController = new PIDController(0.5, 0, 0);
+    private final PIDController frontLeftTurnPidController = new PIDController(0.25, 0, 0);
+    private final PIDController backLeftTurnPidController = new PIDController(0.25, 0, 0);
+    private final PIDController frontRightTurnPidController = new PIDController(0.25, 0, 0);
+    private final PIDController backRightTurnPidController = new PIDController(0.25, 0, 0);
 
     private final CANcoder frontLeftAbsoluteEncoder = new CANcoder(kFrontLeftDriveAbsoluteEncoderPort);
     private final CANcoder backLeftAbsoluteEncoder = new CANcoder(kBackLeftDriveAbsoluteEncoderPort);
@@ -172,28 +178,49 @@ public class Drive extends SubsystemBase {
         // m_RightFrontMotor.setInverted(false);
         // m_RightBackMotor.setInverted(false);
 
-        leftFrontConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-        leftFrontConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        leftFrontConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+        leftFrontConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         leftFrontConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         m_LeftFrontMotor.getConfigurator().apply(leftFrontConfig);
 
-        leftBackConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-        leftBackConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        leftFrontTurnConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+        leftFrontTurnConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        leftFrontTurnConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RemoteCANcoder;
+        leftFrontTurnConfig.Feedback.FeedbackRemoteSensorID = 12;
+        m_LeftFrontTurnMotor.getConfigurator().apply(leftFrontTurnConfig);
+
+        leftBackConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+        leftBackConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         leftBackConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         m_LeftBackMotor.getConfigurator().apply(leftBackConfig);
 
+        leftBackTurnConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+        leftBackTurnConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        leftBackTurnConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RemoteCANcoder;
+        leftBackTurnConfig.Feedback.FeedbackRemoteSensorID = 42;
+        m_LeftBackTurnMotor.getConfigurator().apply(leftBackTurnConfig);
 
         rightFrontConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-        rightFrontConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        rightFrontConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         rightFrontConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         m_RightFrontMotor.getConfigurator().apply(rightFrontConfig);
 
+        rightFrontTurnConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+        rightFrontTurnConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        rightFrontTurnConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RemoteCANcoder;
+        rightFrontTurnConfig.Feedback.FeedbackRemoteSensorID = 22;
+        m_RightFrontTurnMotor.getConfigurator().apply(rightFrontTurnConfig);
+
         rightBackConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-        rightBackConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        rightBackConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         rightBackConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         m_RightBackMotor.getConfigurator().apply(rightBackConfig);
 
-
+        rightBackTurnConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+        rightBackTurnConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        rightBackTurnConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RemoteCANcoder;
+        rightBackTurnConfig.Feedback.FeedbackRemoteSensorID = 32;
+        m_RightBackTurnMotor.getConfigurator().apply(rightBackTurnConfig);
 
         frontLeftAbsoluteEncoderConfig.MagnetSensor.AbsoluteSensorDiscontinuityPoint = 0.5;
         frontLeftAbsoluteEncoderConfig.MagnetSensor.SensorDirection = SensorDirectionValue.CounterClockwise_Positive;
@@ -218,10 +245,10 @@ public class Drive extends SubsystemBase {
 
     @Override
     public void periodic() {
-        m_LeftFrontTurnMotor.set(-frontLeftTurnPidController.calculate(frontLeftAbsoluteEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI + Math.PI / 2, kFrontLeftDriveAbsoluteEncoderOffsetRad));
-        m_RightBackTurnMotor.set(-backRightTurnPidController.calculate(backRightAbsoluteEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI + Math.PI / 2, kBackRightDriveAbsoluteEncoderOffsetRad));
-           m_LeftBackTurnMotor.set(-backLeftTurnPidController.calculate(backLeftAbsoluteEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI + Math.PI / 2, kBackLeftDriveAbsoluteEncoderOffsetRad));
-           m_RightFrontTurnMotor.set(-frontRightTurnPidController.calculate(frontRightAbsoluteEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI + Math.PI / 2, kFrontRightDriveAbsoluteEncoderOffsetRad));
+        m_LeftFrontTurnMotor.set(-frontLeftTurnPidController.calculate(frontLeftAbsoluteEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI, kFrontLeftDriveAbsoluteEncoderOffsetRad));
+        m_RightBackTurnMotor.set(-backRightTurnPidController.calculate(backRightAbsoluteEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI, kBackRightDriveAbsoluteEncoderOffsetRad));
+           m_LeftBackTurnMotor.set(-backLeftTurnPidController.calculate(backLeftAbsoluteEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI, kBackLeftDriveAbsoluteEncoderOffsetRad));
+           m_RightFrontTurnMotor.set(-frontRightTurnPidController.calculate(frontRightAbsoluteEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI, kFrontRightDriveAbsoluteEncoderOffsetRad));
 
         SmartDashboard.putNumber("Output", frontLeftTurnPidController.calculate(frontLeftAbsoluteEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI + Math.PI / 2, kFrontLeftDriveAbsoluteEncoderOffsetRad));
         }
