@@ -6,7 +6,9 @@ package frc.robot;
 
 import static frc.robot.Constants.OIConstants;
 
+import frc.robot.subsystems.Arm;
 import frc.robot.subsystems.Drive;
+import frc.robot.subsystems.Elevator;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -20,7 +22,9 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
  */
 public class SysIdRoutineBot {
   // The robot's subsystems
-  private final Drive m_drive = new Drive();
+  // private final Drive m_drive = new Drive();
+  //private final Elevator elevator = new Elevator();
+  private final Arm arm = new Arm();
 
   // The driver's controller
   CommandXboxController m_driverController =
@@ -36,16 +40,16 @@ public class SysIdRoutineBot {
    */
   public void configureBindings() {
     // Control the drive with split-stick arcade controls
-    m_drive.setDefaultCommand(
-        m_drive.arcadeDriveCommand(
-            () -> -m_driverController.getLeftY(), () -> -m_driverController.getRightX()));
+    arm.setDefaultCommand(
+        arm.arcadeDriveCommand(
+            () -> -m_driverController.getLeftY()));
 
     // Bind full set of SysId routine tests to buttons; a complete routine should run each of these
     // once.
-    m_driverController.a().whileTrue(m_drive.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
-    m_driverController.b().whileTrue(m_drive.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
-    m_driverController.x().whileTrue(m_drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
-    m_driverController.y().whileTrue(m_drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+    m_driverController.a().whileTrue(arm.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
+    m_driverController.b().whileTrue(arm.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+    m_driverController.x().whileTrue(arm.sysIdDynamic(SysIdRoutine.Direction.kForward));
+    m_driverController.y().whileTrue(arm.sysIdDynamic(SysIdRoutine.Direction.kReverse));
   }
 
   /**
@@ -55,6 +59,6 @@ public class SysIdRoutineBot {
    */
   public Command getAutonomousCommand() {
     // Do nothing
-    return m_drive.run(() -> {});
+    return arm.run(() -> {});
   }
 }
