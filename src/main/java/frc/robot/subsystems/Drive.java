@@ -149,21 +149,21 @@ public class Drive extends SubsystemBase {
                         // Record a frame for the left motors. Since these share an encoder, we consider
                         // the entire group to be one motor.
                         log.motor("drive-left")
-                                .voltage(m_LeftFrontMotor.getMotorVoltage().getValue())
-                                .linearPosition(m_distance.mut_replace(m_LeftFrontMotor.getPosition().getValueAsDouble() * kDriveEncoderRot2Meter, Meters))
+                                .voltage(m_LeftBackMotor.getMotorVoltage().getValue())
+                                .linearPosition(m_distance.mut_replace(m_LeftBackMotor.getPosition().getValueAsDouble() * kDriveEncoderRot2Meter, Meters))
                                 .linearVelocity(
                                         m_velocity.mut_replace(
-                                                m_LeftFrontMotor.getVelocity().getValueAsDouble() * kDriveEncoderRPM2MeterPerSec,
+                                                m_LeftBackMotor.getVelocity().getValueAsDouble() * kDriveEncoderRPM2MeterPerSec,
                                                 MetersPerSecond));
 
                         // Record a frame for the right motors. Since these share an encoder, we consider
                         // the entire group to be one motor.
                         log.motor("drive-right")
-                                .voltage(m_RightFrontMotor.getMotorVoltage().getValue())
-                                .linearPosition(m_distance.mut_replace(m_RightFrontMotor.getPosition().getValueAsDouble() * kDriveEncoderRot2Meter, Meters))
+                                .voltage(m_RightBackMotor.getMotorVoltage().getValue())
+                                .linearPosition(m_distance.mut_replace(m_RightBackMotor.getPosition().getValueAsDouble() * kDriveEncoderRot2Meter, Meters))
                                 .linearVelocity(
                                         m_velocity.mut_replace(
-                                                m_RightFrontMotor.getVelocity().getValueAsDouble() * kDriveEncoderRPM2MeterPerSec,
+                                                m_RightBackMotor.getVelocity().getValueAsDouble() * kDriveEncoderRPM2MeterPerSec,
                                                 MetersPerSecond));
                     },
                     // Tell SysId to make generated commands require this subsystem, suffix test
